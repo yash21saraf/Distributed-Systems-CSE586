@@ -17,7 +17,7 @@ Course Website - [Professor Bina Ramamurthy](https://cse.buffalo.edu/~bina/)
 
 ![image](https://github.com/yash21saraf/Distributed-Systems-CSE586/blob/master/images/1.png)
 
-***Website Screenshot
+***Website Screenshot-***
 
 ![image](https://github.com/yash21saraf/Distributed-Systems-CSE586/blob/master/images/2.png)
 
@@ -25,4 +25,3 @@ Course Website - [Professor Bina Ramamurthy](https://cse.buffalo.edu/~bina/)
 
 - Created a Pub-Sub system and used two docker containers to deploy the application. 
 - Used flask as the server and mongodb as the database both present in different containers. 
-# Distributed-Systems-CSE586
