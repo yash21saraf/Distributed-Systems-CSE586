@@ -1,0 +1,2 @@
+mapkey = ""
+weatherkey = ""

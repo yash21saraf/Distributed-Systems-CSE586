@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>PubSub</title>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+		<script src="{{ url_for('static', filename='js/form.js') }}"></script>
+</head>
+<body>
+    <div class="container" id = "pubsubform">
+        <br><br>
+  <form id = "form1">
+      <div class="form-group">
+      <label for="usr">Name:</label>
+      <input type="text" class="form-control" id="userid">
+    </div>
+    <div class="radio">
+      <label><input type="radio" name="type" value = "Publisher" checked>Publisher</label>
+    </div>
+
+    <div class="radio">
+      <label><input type="radio" name="type" value = "Subscriber">Subscriber</label>
+    </div>
+		<div class="form-group">
+  <label for="sel1">Select Topics:</label>
+  <select class="form-control" id="topic">
+    <option>Movies</option>
+    <option>Sports</option>
+    <option>World</option>
+    <option>Politics</option>
+  </select>
+</div>
+
+	<br><br>
+		<button type="submit" class="btn btn-default">Submit</button>
+
+  </form>
+	<div id="successAlert1" class="alert alert-success" role="alert" style="display:none;"></div>
+	<div id="errorAlert1" class="alert alert-danger" role="alert" style="display:none;"></div>
+
+</div>
+
+	<div class="container" id = "publisherform" style="display:none;">
+		<br><br><br><br>
+		<form class="form-inline" id = "form2">
+		  <div class="form-group">
+              <label for="sel1">Select Topics:</label>
+  <select class="form-control" id="topic_2">
+    <option>Movies</option>
+    <option>Sports</option>
+    <option>World</option>
+    <option>Politics</option>
+  </select>
+		    <label class="sr-only" for="content">Content:</label>
+		    <input type="text" class="form-control" id="content" placeholder="Add your text here...">
+		  </div>
+		  <button type="submit" class="btn btn-default">Submit</button>
+		</form>
+		<br>
+		<div id="successAlert" class="alert alert-success" role="alert" style="display:none;"></div>
+		<div id="errorAlert" class="alert alert-danger" role="alert" style="display:none;"></div>
+	</div>
+    <div class="container">
+  <h2>Posts from the topic you subscribed to</h2>
+  <form>
+    <div class="form-group">
+      <textarea class="form-control" rows="25" id="subscriptiondata"></textarea>
+    </div>
+  </form>
+</div>
+    <script>
+        function subscriberFunc(){
+            var targetContainer = document.getElementById("subscriptiondata");
+            var userid = document.getElementById('userid').value;
+            console.log(userid);
+            var url = "/stream?userid="+userid;
+            var eventSource = new EventSource(url);
+            eventSource.onmessage = function(e) {
+                console.log(e.data);
+                targetContainer.innerHTML = e.data;
+        };
+        }
+    </script>
+</body>
+</html>

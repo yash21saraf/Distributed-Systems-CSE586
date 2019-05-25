@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>TravelSafe</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #floating-panel {
+        position: absolute;
+        top: 10px;
+        left: 25%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+      #warnings-panel {
+        width: 100%;
+        height:10%;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="floating-panel">
+      <form  method="POST">
+      <input type="text" name="start" value="" placeholder="Enter Starting Point:" />
+      <input type="text" name="end" value="" placeholder="Enter destination:" />
+      <input type="submit" name="submit" value="Get Directions"  />
+</form>
+    </div>
+    <div id="map"></div>
+    &nbsp;
+    <div id="warnings-panel"></div>
+    <script>
+
+    function initMap() {
+
+          var cost = "{{cost}}"
+          console.log(cost) ;
+          // All the variables has been extracted from the server response
+          var origin = "{{origin}}"
+          var destination = "{{destination}}"
+          var check = "{{check}}"
+          var tempratures = JSON.parse('{{ temps | tojson | safe}}');
+          var places = JSON.parse('{{ places | tojson | safe}}');
+          var coordinatesarr = JSON.parse('{{ coordarr | tojson | safe}}');
+          ///Since the maps json response contains some escape characters they have been processed using the regex replace
+          var ssjson = '{{ serverjson | tojson | safe}}';
+          var ssjson = ssjson.replaceAll("\\\\", "\\\\");
+          var ssjson = ssjson.replaceAll("\"font","\\\"font");
+          var ssjson = ssjson.replaceAll("em\"","em\\\"");
+          sjson=JSON.parse(ssjson);
+
+          var markerArray = [];
+          var stepDisplay = new google.maps.InfoWindow;
+          var renderer = new google.maps.DirectionsRenderer();
+
+          ///Initial position of the map has been defined
+          var us = new google.maps.LatLng(39.8283,-98.5795);
+          var mapOptions = {
+            zoom:4,
+            center: us
+          }
+          //Using the defined position the map has been rendered
+          var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+          renderer.setMap(map);
+
+          //Here it is checked that if the page has been rendered with the required data or not
+          if (check == "True") {
+
+            ///The function calls the renderer which uses server json response by manipulating it
+            calcRoute(origin, destination, sjson, renderer, coordinatesarr);
+            // First all the existing markers from the map are being deleted
+            for (var i = 0; i < markerArray.length; i++) {
+                  markerArray[i].setMap(null);
+             }
+             // Using the coordinate array and place,temp tags all the markers are being added
+            showSteps(coordinatesarr, places, tempratures, markerArray, stepDisplay, map)
+          }
+
+    }
+
+    ///The function processes the maps json response and passes it to the renderer.
+    function calcRoute(origin, destination, sjson, renderer, coordinatesarr) {
+          var startUserLat = coordinatesarr[0][0] ;
+          var endUserLat = coordinatesarr[coordinatesarr.length-1][0] ;
+          var startUserLng = coordinatesarr[0][1] ;
+          var endUserLng = coordinatesarr[coordinatesarr.length-1][1] ;
+          var start = new google.maps.LatLng(startUserLat,startUserLng);
+          var end = new google.maps.LatLng(endUserLat,endUserLng);
+          ///The request used to call the API response on server
+          var request = {
+            origin:start,
+            destination:end,
+            travelMode: google.maps.TravelMode.DRIVING
+          };
+          ///The functions takes rendderer and maps json as inputs and calculates the route
+          renderDirections(map, sjson, request, renderer)
+    }
+
+    ///Passes the edited respose of gmaps json to the renderer
+    function renderDirections(map, response, request, renderer){
+          renderer.setOptions({
+          directions : {
+                        routes :  [typecastRoutes(response)],
+
+                        // "request" is important and not returned by web service it's an
+                        // object containing "origin", "destination" and "travelMode"
+                        request : request
+                      },
+                      draggable : true,
+                      map : map
+                      });
+    }
+
+    function showSteps(coordinatesarr, places, tempratures, markerArray, stepDisplay, map) {
+          // For each step, place a marker, and add the text to the marker's infowindow.
+          // Also attach the marker to an array so we can keep track of it and remove it
+          // when calculating new routes.
+          for (var i = 0; i < coordinatesarr.length; i++) {
+              var marker = markerArray[i] = markerArray[i] || new google.maps.Marker;
+              marker.setMap(map);
+              latitude = coordinatesarr[i][0]
+              longitude = coordinatesarr[i][1]
+              ///Sets the marker using the latitude longitude pair
+              marker.setPosition({
+                                "lat" : latitude,
+                                "lng" : longitude});
+              //Adds the data to the marker
+              attachInstructionText(stepDisplay, marker, tempratures[i], places[i], map);
+          }
+    }
+
+    ///Adds the marker data on top of the marker
+    function attachInstructionText(stepDisplay, marker, temp, place, map) {
+          google.maps.event.addListener(marker, 'click', function() {
+          // Open an info window when the marker is clicked on, containing the text
+          // of the step.
+          text = String(place) + " ,Temp: " + String(Math.round((temp - 273) * 100) / 100 );
+          stepDisplay.setContent(text);
+          stepDisplay.open(map, marker);
+          });
+    }
+
+    //Calculates the new json file by editing the maps json response to pass it to the renderer
+    function typecastRoutes(route){
+          route.bounds = asBounds(route.bounds);
+          route.overview_path = asPath(route.overview_polyline);
+
+          route.legs.forEach(function(leg){
+              leg.start_location = asLatLng(leg.start_location);
+              leg.end_location   = asLatLng(leg.end_location);
+
+              leg.steps.forEach(function(step){
+                  step.start_location = asLatLng(step.start_location);
+                  step.end_location   = asLatLng(step.end_location);
+                  step.path = asPath(step.polyline);
+                  });
+              });
+          return route ;
+    }
+
+    function asBounds(boundsObject){
+          return new google.maps.LatLngBounds(asLatLng(boundsObject.southwest),
+                                            asLatLng(boundsObject.northeast));
+    }
+
+    function asLatLng(latLngObject){
+          return new google.maps.LatLng(latLngObject.lat, latLngObject.lng);
+    }
+
+    function asPath(encodedPolyObject){
+          return google.maps.geometry.encoding.decodePath( encodedPolyObject.points );
+    }
+
+    String.prototype.replaceAll = function(search, replacement) {
+          var target = this;
+          return target.replace(new RegExp(search, 'g'), replacement);
+    };
+
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry">
+    </script>
+  </body>
+</html>
